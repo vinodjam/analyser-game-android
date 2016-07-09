@@ -1,4 +1,4 @@
-package com.vinodjam.game;
+package com.vinodjam.analysergame;
 
 import org.libsdl.app.SDLActivity; 
 import android.content.Intent;

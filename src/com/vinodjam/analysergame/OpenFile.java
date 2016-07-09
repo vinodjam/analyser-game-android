@@ -1,4 +1,4 @@
-package com.vinodjam.game;
+package com.vinodjam.analysergame;
 
 import java.io.File;
 import java.io.Serializable;
