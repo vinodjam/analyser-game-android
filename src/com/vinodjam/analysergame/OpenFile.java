@@ -46,7 +46,7 @@ public class OpenFile extends Activity {
 		//catch (ActivityNotFoundException e) {
 		//Log.e("tag", "No activity can handle picking a file. Showing alternatives.");
 		//}	
-    		
+	}
 
 	
 	@Override
