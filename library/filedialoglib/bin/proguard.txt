@@ -1,0 +1,3 @@
+# view AndroidManifest.xml #generated:12
+-keep class ar.com.daidalos.afiledialog.FileChooserActivity { <init>(...); }
+

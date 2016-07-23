@@ -18,25 +18,53 @@ MusicCircle::MusicCircle(int r,int c,int x,int y,int t)
 	time_spawn=t;
 }
 
-void MusicCircle::circle_render(SDL_Renderer* renderer, SDL_Texture *texture,int SCREEN_HEIGHT,int GAME_START_TIME,int TIME_CIRCLE_ON_SCREEN)
+void MusicCircle::circle_render(SDL_Renderer* renderer, SDL_Texture *red_circle, SDL_Texture *blue_circle, SDL_Texture *green_circle, SDL_Texture *yellow_circle, int SCREEN_HEIGHT,int GAME_START_TIME,int TIME_CIRCLE_ON_SCREEN,int PAUSED_TICKS)
 {
-	int new_y=y_pos+ (SDL_GetTicks()-(GAME_START_TIME+(time_spawn))) * SCREEN_HEIGHT / ( TIME_CIRCLE_ON_SCREEN);
+	int new_y=y_pos+ (SDL_GetTicks()-(GAME_START_TIME+(time_spawn)+PAUSED_TICKS)) * SCREEN_HEIGHT / ( TIME_CIRCLE_ON_SCREEN);
 	if (colour==1)
 	{
-		renderInRect(renderer,texture,x_pos-radius,new_y-radius,2*radius,2*radius);
+		renderInRect(renderer,red_circle,x_pos-radius,new_y-radius,2*radius,2*radius);
+	}
+	else if (colour==2)
+	{
+		renderInRect(renderer,blue_circle,x_pos-radius,new_y-radius,2*radius,2*radius);
+	}
+	else if (colour==3)
+	{
+		renderInRect(renderer,green_circle,x_pos-radius,new_y-radius,2*radius,2*radius);
+	}
+	else if (colour==4)
+	{
+		renderInRect(renderer,yellow_circle,x_pos-radius,new_y-radius,2*radius,2*radius);
 	}
 		
 }
 
-void MusicCircle::effect_render(SDL_Renderer* renderer, SDL_Texture *texture1,SDL_Texture *texture2,int SCREEN_HEIGHT, int GAME_START_TIME,int TIME_EFFECT_ON_SCREEN)
+void MusicCircle::effect_render(SDL_Renderer* renderer,SDL_Texture *black_circle, SDL_Texture *red_circle,SDL_Texture *blue_circle, SDL_Texture *green_circle, SDL_Texture *yellow_circle,int SCREEN_HEIGHT, int GAME_START_TIME,int TIME_EFFECT_ON_SCREEN, int PAUSED_TICKS)
 {
-	int new_radius=0.9*radius+0.25*radius*(SDL_GetTicks()-(GAME_START_TIME+(time_spawn)))/float(TIME_EFFECT_ON_SCREEN);
+	int new_radius=1.1*radius+0.1*radius*pow(10,(SDL_GetTicks()-(GAME_START_TIME+(time_spawn)+PAUSED_TICKS))/float(TIME_EFFECT_ON_SCREEN));
 	if (colour==1)
 	{
-		renderInRect(renderer,texture1,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
+		renderInRect(renderer,red_circle,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
 	}
-	new_radius -= 0.003*SCREEN_HEIGHT;
-	renderInRect(renderer,texture2,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
+	else if (colour==2)
+	{
+		renderInRect(renderer,blue_circle,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
+	}
+	else if (colour==3)
+	{
+		renderInRect(renderer,green_circle,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
+	}
+	else if (colour==4)
+	{
+		renderInRect(renderer,yellow_circle,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
+	}
+	if ((SDL_GetTicks()-(GAME_START_TIME+time_spawn+PAUSED_TICKS))<TIME_EFFECT_ON_SCREEN/4)
+		new_radius -= 0.009*SCREEN_HEIGHT;
+	else if ((SDL_GetTicks()-(GAME_START_TIME+time_spawn+PAUSED_TICKS))<TIME_EFFECT_ON_SCREEN/2)
+		new_radius -= 0.006*SCREEN_HEIGHT;
+	else new_radius -= 0.004*SCREEN_HEIGHT;
+	renderInRect(renderer,black_circle,x_pos-new_radius,y_pos-new_radius,2*new_radius,2*new_radius);
 }
 
 

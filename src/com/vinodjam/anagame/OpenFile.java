@@ -1,5 +1,4 @@
 package com.vinodjam.anagame;
-
 import java.io.File;
 import java.io.Serializable;
 
@@ -8,17 +7,15 @@ import android.app.Dialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Environment;
-import android.util.Log;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.Button;
 import android.widget.Toast;
-
+import ar.com.daidalos.afiledialog.*;
+import android.util.Log;
 
 public class OpenFile extends Activity {
     /** Called when the activity is first created. */
-    private static final int PICKFILE_RESULT_CODE = 1;
-    
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -38,48 +35,67 @@ public class OpenFile extends Activity {
     private OnClickListener btnActivitySelectImages = new OnClickListener() {
     	public void onClick(View v) {
     		// Create the intent for call the activity.
-    		 Intent fileintent = new Intent(Intent.ACTION_GET_CONTENT);
-		fileintent.setType("file/*");
-		//try {
-		startActivityForResult(fileintent,PICKFILE_RESULT_CODE);
-		//} 
-		//catch (ActivityNotFoundException e) {
-		//Log.e("tag", "No activity can handle picking a file. Showing alternatives.");
-		//}	
-		Log.v("OpenFile", "?? is : ?? OnClickListener");
+            Intent intent = new Intent(OpenFile.this, FileChooserActivity.class);
+            Log.v("OpenFile", "Intent Created ");// + FilePath);
+            intent.putExtra(FileChooserActivity.INPUT_START_FOLDER, Environment.getExternalStorageDirectory() + "/Music/");
+            // Define the filter for select images.
+            intent.putExtra(FileChooserActivity.INPUT_REGEX_FILTER, ".*MP3|.*OGG|.*mp3|.*ogg|");
+            
+    		// Call the activity            
+            OpenFile.this.startActivityForResult(intent, 0);  
+    	}
+	};
+    
+	
+	
+	
+	// ---- Methods for display the results ----- //
+	
+	private FileChooserDialog.OnFileSelectedListener onFileSelectedListener = new FileChooserDialog.OnFileSelectedListener() {
+		public void onFileSelected(Dialog source, File file) {
+			source.hide();
+			Log.v("OpenFile", "1File Path is : " + file.getName());
+			Toast toast = Toast.makeText(OpenFile.this, "File selected: " + file.getName(), Toast.LENGTH_LONG);
+			toast.show();
+		}
+		public void onFileSelected(Dialog source, File folder, String name) {
+			source.hide();
+			Log.v("OpenFile", "2File Path is : " + folder.getName());
+			Toast toast = Toast.makeText(OpenFile.this, "File created: " + folder.getName() + "/" + name, Toast.LENGTH_LONG);
+			toast.show();
 		}
 	};
 	
-	
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-	switch(requestCode){
-		case PICKFILE_RESULT_CODE:
-			if(resultCode==RESULT_OK){
-				File file = new File(data.getData().getPath());
-				if (file.getPath().contains("storage"))
-				{
-					String FilePath=file.getPath().replace("/share","");//.replace(" ","\\ ");
-					Log.v("OpenFile", "File Path is : " + FilePath);
-					Intent intent = new Intent(OpenFile.this, HelloSDL2Activity.class);
-					intent.putExtra("file_path",FilePath);
-				
-					OpenFile.this.startActivity(intent);
-				}
-				else
-				{ 
-					String FilePath = Environment.getExternalStorageDirectory()+file.getPath().replace("/share","");//.replace(" ","\\ ");
-					Log.v("OpenFile", "File Path is : " + FilePath);
-					Intent intent = new Intent(OpenFile.this, HelloSDL2Activity.class);
-					intent.putExtra("file_path",FilePath);
-				
-					OpenFile.this.startActivity(intent);
-				}
-				
-				
-			}
-		break;
-   
-		}
+	    if (resultCode == Activity.RESULT_OK) {
+	    	boolean fileCreated = false;
+	    	String filePath = "";
+	    	
+	    	Bundle bundle = data.getExtras();
+	        if(bundle != null)
+	        {
+	        	if(bundle.containsKey(FileChooserActivity.OUTPUT_NEW_FILE_NAME)) {
+	        		fileCreated = true;
+	        		File folder = (File) bundle.get(FileChooserActivity.OUTPUT_FILE_OBJECT);
+	        		String name = bundle.getString(FileChooserActivity.OUTPUT_NEW_FILE_NAME);
+	        		filePath = folder.getAbsolutePath() + "/" + name;
+	        	} else {
+	        		fileCreated = false;
+	        		File file = (File) bundle.get(FileChooserActivity.OUTPUT_FILE_OBJECT);
+	        		filePath = file.getAbsolutePath();
+	        	}
+	        }
+	    	
+	        String message = fileCreated? "File created" : "File opened";
+	        message += ": " + filePath;
+	        Log.v("OpenFile", "3File Path is : " + filePath);
+	    	Toast toast = Toast.makeText(OpenFile.this, message, Toast.LENGTH_LONG);
+			toast.show();
+		Intent intent = new Intent(OpenFile.this, HelloSDL2Activity.class);
+		intent.putExtra("file_path",filePath);
+		
+		OpenFile.this.startActivity(intent);
+	    }
 	}
 }

@@ -4,7 +4,7 @@
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
       package="com.vinodjam.anagame"
-      android:versionCode="1"
+      android:versionCode="2"
       android:versionName="0.1"
       android:installLocation="auto">
 
@@ -70,6 +70,8 @@
             </intent-filter>
             -->
         </activity>
+          
+		<activity android:name="ar.com.daidalos.afiledialog.FileChooserActivity" />
     </application>
 
 </manifest> 

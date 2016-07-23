@@ -52,8 +52,11 @@ TTF_Font *font = NULL;
 int SCREEN_WIDTH = 800;
 int SCREEN_HEIGHT = 640;
 int GAME_START_TIME=-1;
+int SONG_TIME=-1;
 int my_index=0;
 int PLOT_SAMPLES=-1;
+
+int PAUSED_TICKS=0;
 
 float GLOB_MAX_POS=0,GLOB_MAX_POWER=0,GLOB_MAX_POWER_SQ=0,MIN_POS=-1;
 
@@ -64,6 +67,7 @@ float *HANN_COEFF=NULL;
 myQueue circles,effects;
 
 SDL_Texture *red_circle=NULL, *red_bar=NULL, *black_circle=NULL, *background=NULL, *gray=NULL, *score=NULL;
+SDL_Texture *blue_circle=NULL, *green_circle=NULL, *yellow_circle=NULL, *white=NULL;
 
 SDL_Color textColor = { 255, 255, 255 };
 
@@ -84,10 +88,18 @@ void close_cleanup()
 	background=NULL;
 	SDL_DestroyTexture(red_circle);
 	red_circle=NULL;
+	SDL_DestroyTexture(yellow_circle);
+	yellow_circle=NULL;
+	SDL_DestroyTexture(blue_circle);
+	blue_circle=NULL;
+	SDL_DestroyTexture(green_circle);
+	green_circle=NULL;
 	SDL_DestroyTexture(black_circle);
 	black_circle=NULL;
 	SDL_DestroyTexture(gray);
 	gray=NULL;
+	SDL_DestroyTexture(white);
+	white=NULL;
 	TTF_CloseFont(font);
 	font=NULL;
 	SDL_DestroyRenderer(renderer);
@@ -111,6 +123,18 @@ void loadAllTextures()
 	{
 		SDL_Log("Could not load Red Circle","%s\n");
 	}
+	if (loadTexture(renderer,blue_circle,"Resources/Pictures/DarkBlueCircle.png")!=true)
+	{
+		SDL_Log("Could not load Red Circle","%s\n");
+	}
+	if (loadTexture(renderer,green_circle,"Resources/Pictures/GreenCircle.png")!=true)
+	{
+		SDL_Log("Could not load Red Circle","%s\n");
+	}
+	if (loadTexture(renderer,yellow_circle,"Resources/Pictures/YellowCircle.png")!=true)
+	{
+		SDL_Log("Could not load Red Circle","%s\n");
+	}
 	if (loadTexture(renderer,black_circle,"Resources/Pictures/BlackCircle.png")!=true)
 	{
 		SDL_Log("Could not load Black Circle\n");
@@ -118,6 +142,10 @@ void loadAllTextures()
 	if (loadTexture(renderer,gray,"Resources/Pictures/Gray.png")!=true)
 	{
 		SDL_Log("Could not load Gray\n");
+	}
+	if (loadTexture(renderer,white,"Resources/Pictures/White.png")!=true)
+	{
+		SDL_Log("Could not load White\n");
 	}
 	if (loadTexture(renderer,red_bar,"Resources/Pictures/RedBox.png")!=true)
 	{
@@ -136,22 +164,22 @@ void loadAllTextures()
 void renderCircles()
 {
 	mynode *temp=circles.beginning;
-	for (int i=0;i<1000 && temp!=NULL;i++)
+	for (int i=0;i<30 && temp!=NULL;i++)
 	{
-		if ( (temp->circle.time_spawn+GAME_START_TIME) > (SDL_GetTicks()+500) )
+		if ( (temp->circle.time_spawn+GAME_START_TIME+PAUSED_TICKS) > (SDL_GetTicks()+500) )
 		{
 			temp=temp->next;
 
 			//NOT YET TIME
 		}
-		else if ( (temp->circle.time_spawn+GAME_START_TIME + TIME_CIRCLE_ON_SCREEN + 3000) < (SDL_GetTicks()) ) //3000 is buffer time
+		else if ( (temp->circle.time_spawn+GAME_START_TIME + TIME_CIRCLE_ON_SCREEN + 3000 +PAUSED_TICKS) < (SDL_GetTicks()) ) //3000 is buffer time
 		{
 			temp=temp->next;
 			circles.remove_element();
 		}
 		else
 		{
-			temp->circle.circle_render(renderer,red_circle, SCREEN_HEIGHT, GAME_START_TIME,TIME_CIRCLE_ON_SCREEN);
+			temp->circle.circle_render(renderer,red_circle,blue_circle,green_circle,yellow_circle, SCREEN_HEIGHT, GAME_START_TIME,TIME_CIRCLE_ON_SCREEN, PAUSED_TICKS);
 			temp=temp->next;
 
 		}
@@ -166,14 +194,14 @@ void renderEffects()
 		for (;temp!=NULL;)
 		{
 			//<<i<<endl;
-			if ((temp->circle.time_spawn+GAME_START_TIME+TIME_EFFECT_ON_SCREEN)<(SDL_GetTicks()))
+			if ((temp->circle.time_spawn+GAME_START_TIME+TIME_EFFECT_ON_SCREEN+PAUSED_TICKS)<(SDL_GetTicks()))
 			{
 				temp=temp->next;
 				effects.remove_element();
 			}
 			else
 			{
-				temp->circle.effect_render(renderer,red_circle,black_circle,SCREEN_HEIGHT, GAME_START_TIME,TIME_EFFECT_ON_SCREEN);
+				temp->circle.effect_render(renderer,black_circle,red_circle,blue_circle,green_circle,yellow_circle,SCREEN_HEIGHT, GAME_START_TIME,TIME_EFFECT_ON_SCREEN, PAUSED_TICKS);
 				temp=temp->next;
 
 			}
@@ -182,35 +210,109 @@ void renderEffects()
 	//else cout<<"EMPTY"<<endl;
 }
 
-	
-void checkCircleClick(int x,int y)
+int pauseNow()
 {
-	mynode *temp=circles.beginning;
-	for (int i=0;i<15 && temp!=NULL;temp=temp->next,i++)
+	Mix_PauseMusic();
+	std::stringstream texText;
+	texText.str("");
+	texText<<"RESUME";
+	std::stringstream texText2;
+	texText2.str("");
+	texText2<<"QUIT";
+	SDL_Surface *resumesurf=TTF_RenderText_Solid( font, texText.str().c_str(), textColor );
+	SDL_Surface *quitsurf=TTF_RenderText_Solid( font, texText2.str().c_str(), textColor );
+	SDL_Texture *resumet = SDL_CreateTextureFromSurface( renderer, resumesurf );
+	SDL_Texture *quitt = SDL_CreateTextureFromSurface( renderer, quitsurf );
+	SDL_FreeSurface( resumesurf );
+	SDL_FreeSurface( quitsurf );
+	if (resumet==NULL)
+		SDL_Log("Texture Error Text\n");
+		
+		
+	int now=SDL_GetTicks();
+	SDL_Event eventpause;
+	SDL_RenderClear(renderer);
+	SDL_SetRenderDrawColor(renderer,0x00,0x00,0x00,0xFF);
+	renderInRect(renderer,green_circle,0,0,SCREEN_WIDTH, SCREEN_HEIGHT/2);
+	renderInRect(renderer,red_circle,0,SCREEN_HEIGHT/2,SCREEN_WIDTH, SCREEN_HEIGHT/2);
+	
+	renderInRect(renderer,resumet,SCREEN_WIDTH/4,SCREEN_HEIGHT/6,SCREEN_WIDTH/2,SCREEN_HEIGHT/4);
+	renderInRect(renderer,quitt,SCREEN_WIDTH/4,4*SCREEN_HEIGHT/6,SCREEN_WIDTH/2,SCREEN_HEIGHT/4);
+		
+	SDL_RenderPresent(renderer);
+	
+	bool resume=false;
+	while (resume!=true)
 	{
-		if ((temp->circle.x_pos-temp->circle.radius)<x && (temp->circle.x_pos+temp->circle.radius)>x)
-		{			
-			//SDL_Log("Y POS %d\n",new_ypos);
-			int timediff=SDL_GetTicks()-GAME_START_TIME-temp->circle.time_spawn;
-			if (timediff>TIME_CIRCLE_ON_SCREEN*0.8)
+		while(SDL_PollEvent(&eventpause)!=0)
+		{
+			if (eventpause.type==SDL_MOUSEBUTTONDOWN)
 			{
-				CURR_SCORE++;
-				MusicCircle new_effect=temp->circle;
-				int new_ypos=temp->circle.y_pos+ ( ( (SDL_GetTicks()-GAME_START_TIME-temp->circle.time_spawn) * SCREEN_HEIGHT )/ TIME_CIRCLE_ON_SCREEN );
-			
-				new_effect.y_pos=new_ypos;
-				new_effect.time_spawn=(SDL_GetTicks()-GAME_START_TIME);
-				effects.add_element(new_effect);
-				while (circles.beginning!=temp && temp->next!=NULL)
-					circles.remove_element();
-				temp=temp->next;
-				circles.remove_element();
-				if (temp==NULL)
-					break;
-				//SDL_Log("Removing %d\n",new_ypos);
-				//effects.beginning->circle.effect_render(renderer,red_circle,black_circle,SCREEN_HEIGHT, GAME_START_TIME,TIME_EFFECT_ON_SCREEN);
+				int x,y;
+				SDL_GetMouseState(&x,&y);
+				if (y<SCREEN_HEIGHT/2)
+				{
+					PAUSED_TICKS+=SDL_GetTicks()-now;
+					resume=true;
+					Mix_ResumeMusic();
+					SDL_DestroyTexture(resumet);
+					resumet=NULL;	
+					SDL_DestroyTexture(quitt);
+					quitt=NULL;	
+					return 0;
+				}
+				else if (y>SCREEN_HEIGHT/2)
+				{
+					SDL_DestroyTexture(resumet);
+					resumet=NULL;	
+					SDL_DestroyTexture(quitt);
+					quitt=NULL;	
+					return 1;
+				}
 			}
-		} 
+		}
+	}
+	return 0;
+	
+}
+	
+int checkCircleClick(int x,int y)
+{
+	if (x>SCREEN_WIDTH-200 && y<150)
+	{
+		if (pauseNow()==1)
+			return 1;
+	}
+	else
+	{
+		mynode *temp=circles.beginning;
+		for (int i=0;i<15 && temp!=NULL;temp=temp->next,i++)
+		{
+			if ((temp->circle.x_pos-temp->circle.radius)<x && (temp->circle.x_pos+temp->circle.radius)>x)
+			{			
+				
+				int timediff=SDL_GetTicks()-GAME_START_TIME-temp->circle.time_spawn-PAUSED_TICKS;
+				int new_ypos=temp->circle.y_pos+ ( ( (SDL_GetTicks()-GAME_START_TIME-temp->circle.time_spawn-PAUSED_TICKS) * SCREEN_HEIGHT )/ TIME_CIRCLE_ON_SCREEN );
+				//SDL_Log("Y POS %d\n",new_ypos);
+				if (new_ypos+temp->circle.radius>0.9*SCREEN_HEIGHT && timediff>0.8*TIME_CIRCLE_ON_SCREEN)
+				{
+					CURR_SCORE++;
+					MusicCircle new_effect=temp->circle;
+					
+					new_effect.y_pos=new_ypos;
+					new_effect.time_spawn=(SDL_GetTicks()-GAME_START_TIME-PAUSED_TICKS);
+					effects.add_element(new_effect);
+					while (circles.beginning!=temp && temp->next!=NULL)
+						circles.remove_element();
+					temp=temp->next;
+					circles.remove_element();
+					if (temp==NULL)
+						break;
+					//SDL_Log("Removing %d\n",new_ypos);
+					//effects.beginning->circle.effect_render(renderer,red_circle,black_circle,SCREEN_HEIGHT, GAME_START_TIME,TIME_EFFECT_ON_SCREEN);
+				}
+			} 
+		}
 	}
 	/*
 	temp=circles.beginning;
@@ -231,6 +333,7 @@ void checkCircleClick(int x,int y)
 	SDL_Log("No of Effects : %d\n",number);
 	SDL_Log("--------------\n");
 	*/
+	
 }
 
 
@@ -281,7 +384,7 @@ int decode_ogg(char path[])
 	}				//TO CHOOSE CORRECT POWER OF 2
 	SAMPLES_IN_HANN_WINDOW=pow(2,(temp1-1));
 	SDL_Log("Sample in a window         : %d\n",SAMPLES_IN_HANN_WINDOW);
-
+	my_index=0;
 	//SAMPLES_IN_HANN_WINDOW=32768;
 	char *samples_buffer=(char*)malloc(NO_OF_CHANNELS*SAMPLES_IN_HANN_WINDOW*sizeof(char)*2);		//2 BYTES PER SAMPLE
 
@@ -290,11 +393,14 @@ int decode_ogg(char path[])
 	float *sample_for_fft=(float*)malloc(SAMPLES_IN_HANN_WINDOW*sizeof(float));
 	kiss_fft_cpx *output=(kiss_fft_cpx*)malloc((SAMPLES_IN_HANN_WINDOW/2+1)*sizeof(kiss_fft_cpx));
 	
-	float LOCAL_VREF[8]={0,0,0,0,0,0,0,0};
-	float *output_buffer_2sec[8];
+	double LOCAL_VREF[8]={0,0,0,0,0,0,0,0};
+	double *output_buffer_2sec[8];
 	for (int i=0;i<8;i++)
 	{
-		output_buffer_2sec[i]=(float*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(float));
+		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(double));
+		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*2;j++)
+			output_buffer_2sec[i][j]=0;
+		LOCAL_VREF[i]=0;
 	}
 	
 	kiss_fftr_cfg test_cfg=kiss_fftr_alloc(SAMPLES_IN_HANN_WINDOW,0,NULL,NULL);
@@ -367,18 +473,24 @@ int decode_ogg(char path[])
 					}
 					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*7+output_buffer_2sec[l][my_index];
 					LOCAL_VREF[l]/=8;
+					//SDL_Log("LocV %f \t L : %d\n",LOCAL_VREF[l],l);
+					//SDL_Log("OutB %f \t L : %d \t MI : %d\n",output_buffer_2sec[l][my_index],l,my_index);
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
 					output_buffer_2sec[l][my_index]=sqrt(output_buffer_2sec[l][my_index]);
 				}
-				float max_inc=0;
+				float max_inc;
+				max_inc=0;
 				int l_max=-1;
 				for (int l=0;l<8;l++)
 				{
 					float inc=log10(output_buffer_2sec[l][my_index]/LOCAL_VREF[l]);
+					//SDL_Log("Increase : %f\t%f\t%f\n",inc,output_buffer_2sec[l][my_index],LOCAL_VREF[l]);
 					if (inc>THRESHOLD)
 					{
+						
 						if (inc>max_inc)
 						{
+								
 							max_inc=log10(output_buffer_2sec[l][my_index]/LOCAL_VREF[l]);
 							l_max=l;
 						}
@@ -388,9 +500,10 @@ int decode_ogg(char path[])
 				int tspawn=time_increment*notimes/2;
 				if (l_max!=-1 && tspawn-LAST_CIRCLE>500)
 				{
-					int colour=1;
+					int colour=1 +rand()%4;
+					//colour+=rand(
 					int rad=SCREEN_WIDTH/5;
-					int y_pos=0;
+					int y_pos=-0.1*SCREEN_HEIGHT;
 					int x_pos=SCREEN_WIDTH/16+l_max*SCREEN_WIDTH/8;
 					if (x_pos+rad>SCREEN_WIDTH)
 					{
@@ -401,7 +514,7 @@ int decode_ogg(char path[])
 					LAST_CIRCLE=tspawn;
 				}		
 				my_index++;
-				my_index%=8;
+				my_index%=16;//OVERLAPS*APPROX_TIME_DIVISIONS*2
 				
 				for (int j=0;j<(SAMPLES_IN_HANN_WINDOW/2+1)/8;j++)
 				{
@@ -436,7 +549,8 @@ int decode_ogg(char path[])
 		}
 	}
 	//cout<<NO_OF_CHANNELS*SAMPLES_IN_HANN_WINDOW*sizeof(char)*2<<endl;
-	SDL_Log("Actual Sample         : %ld\n",ov_pcm_total(&vf,-1));
+	SDL_Log("Actual Sample         : %lld\n",ov_pcm_total(&vf,-1));
+	SONG_TIME=time_increment*notimes/2;
 	ov_clear(&vf);    
 	//SDL_Log("Samples read in a window         : %d\n",notimes*SAMPLES_IN_HANN_WINDOW/2);
 	//SDL_Log("Temptot         : %d\n",temptot/4);
@@ -480,7 +594,7 @@ int decode_mp3(char path[])
 	//SDL_Log("%s",*(declist+1));
 	//SDL_Log("%s",*(declist+2));
 	
-
+	my_index=0;
 	if(err != MPG123_OK || (mh = mpg123_new(NULL, &err)) == NULL)
 	{
 		SDL_Log( "Basic setup goes wrong: %s", mpg123_plain_strerror(err));
@@ -536,11 +650,14 @@ int decode_mp3(char path[])
 	float *sample_for_fft=(float*)malloc(SAMPLES_IN_HANN_WINDOW*sizeof(float));
 	kiss_fft_cpx *output=(kiss_fft_cpx*)malloc((SAMPLES_IN_HANN_WINDOW/2+1)*sizeof(kiss_fft_cpx));
 	
-	float LOCAL_VREF[8]={0,0,0,0,0,0,0,0};
-	float *output_buffer_2sec[8];
+	double LOCAL_VREF[8]={0,0,0,0,0,0,0,0};
+	double *output_buffer_2sec[8];
 	for (int i=0;i<8;i++)
 	{
-		output_buffer_2sec[i]=(float*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(float));
+		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(double));
+		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*2;j++)
+			output_buffer_2sec[i][j]=0;
+		LOCAL_VREF[i]=0;
 	}
 	
 	kiss_fftr_cfg test_cfg=kiss_fftr_alloc(SAMPLES_IN_HANN_WINDOW,0,NULL,NULL);
@@ -624,15 +741,18 @@ int decode_mp3(char path[])
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
 					output_buffer_2sec[l][my_index]=sqrt(output_buffer_2sec[l][my_index]);
 				}
-				float max_inc=0;
+				float max_inc;
+				max_inc=0;
 				int l_max=-1;
 				for (int l=0;l<8;l++)
 				{
 					float inc=log10(output_buffer_2sec[l][my_index]/LOCAL_VREF[l]);
 					if (inc>THRESHOLD)
 					{
+						//SDL_Log("Increase : %f\n",inc);		
 						if (inc>max_inc)
 						{
+							
 							max_inc=log10(output_buffer_2sec[l][my_index]/LOCAL_VREF[l]);
 							l_max=l;
 						}
@@ -642,9 +762,9 @@ int decode_mp3(char path[])
 				int tspawn=time_increment*notimes/2;
 				if (l_max!=-1 && tspawn-LAST_CIRCLE>500)
 				{
-					int colour=1;
+					int colour=1 +rand()%4;
 					int rad=SCREEN_WIDTH/5;
-					int y_pos=-rad;
+					int y_pos=-0.1*SCREEN_HEIGHT;
 					int x_pos=SCREEN_WIDTH/16+l_max*SCREEN_WIDTH/8;
 					if (x_pos+rad>SCREEN_WIDTH)
 					{
@@ -698,7 +818,7 @@ int decode_mp3(char path[])
 	mpg123_close(mh);
 	mpg123_delete(mh);
 	mpg123_exit();
-	
+	SONG_TIME=time_increment*notimes/2;
 	free(samples_buffer);
 	free(sample_for_fft);
 	free(output);	
@@ -731,9 +851,11 @@ bool start_game(char path[])
 		SDL_Log("Could not load Music  %s\n",Mix_GetError());
 		return false;
 	}
-	//Mix_PlayMusic(temp_music,1);
-
-
+	Mix_PlayMusic(temp_music,1);
+	if (Mix_PlayingMusic()==0)
+		SDL_Log("Not Playing :( \n");
+	Mix_HaltMusic();
+	SDL_Log("Finished Loading\n");
 	SDL_Event event;
 	bool quit=false;
 	
@@ -770,7 +892,7 @@ bool start_game(char path[])
 	
 	GAME_START_TIME=SDL_GetTicks();
 	int LAST_UPDATE=GAME_START_TIME,CURRENT_TIME=0;
-	SDL_Log("\n");
+	SDL_Log("Before Counting\n");
 	
 	int music_on=false;;
 	mynode *temp=circles.beginning;
@@ -792,43 +914,48 @@ bool start_game(char path[])
 	{
 		if (music_on==false && SDL_GetTicks()>GAME_START_TIME+TIME_CIRCLE_ON_SCREEN )
 		{
-			if (Mix_PlayMusic(temp_music,1)==-1)
+			int terr=Mix_PlayMusic(temp_music,1);
+			if (terr==-1)
 				SDL_Log("Music Error : %s\n",Mix_GetError());
+			SDL_Log("Terr %d\n",terr);
 			music_on=true;
+			terr=Mix_GetMusicType(NULL);
+			SDL_Log("%d\n",Mix_GetMusicType(NULL));
 			SDL_Log("Music Started\n");
+			SDL_Log("Could not ?? Music  %s\n",Mix_GetError());
 			SDL_Log("volume was    : %d\n", Mix_VolumeMusic(MIX_MAX_VOLUME));
 			SDL_Log("volume is now : %d\n", Mix_VolumeMusic(-1));
-			SDL_Log("%d\n",Mix_GetMusicType(NULL));
-			switch(Mix_GetMusicType(NULL))
+			
+			switch(Mix_GetMusicType(temp_music))
 			{
 			case	MUS_NONE:
 				MUS_CMD:
-					printf("Command based music is playing.\n");
+					SDL_Log("Command based music is playing.\n");
 					break;
 				MUS_WAV:
-					printf("WAVE/RIFF music is playing.\n");
+					SDL_Log("WAVE/RIFF music is playing.\n");
 					break;
 				MUS_MOD:
-					printf("MOD music is playing.\n");
+					SDL_Log("MOD music is playing.\n");
 					break;
 				MUS_MID:
-					printf("MIDI music is playing.\n");
+					SDL_Log("MIDI music is playing.\n");
 					break;
 				MUS_OGG:
-					printf("OGG music is playing.\n");
+					SDL_Log("OGG music is playing.\n");
 					break;
 				MUS_MP3:
-					printf("MP3 music is playing.\n");
+					SDL_Log("MP3 music is playing.\n");
 					break;
 				default:
-					printf("Unknown music is playing.\n");
+					SDL_Log("Unknown music is playing.\n");
 					break;
 			}
 		}
 		
 	
 		
-		float avgFPS = countedFrames / ( (SDL_GetTicks()-GAME_START_TIME) / 1000.f ); 
+		float avgFPS = countedFrames / ( (SDL_GetTicks()-GAME_START_TIME-PAUSED_TICKS) / 1000.f ); 
 		if ( avgFPS > 2000000 )
 		{ 
 			avgFPS = 0; 
@@ -849,27 +976,20 @@ bool start_game(char path[])
 		if (music_on==true && (Mix_PlayingMusic()==0))
 		{
 			Mix_PlayMusic(temp_music,1);
+			SDL_Log("Music Error : %s\n",Mix_GetError());
 			SDL_Log("Restarted\n");
 		}
 		*/
 		if (music_on==true && (Mix_PausedMusic()==1))
 		{
 			Mix_ResumeMusic();
+			SDL_Log("Music Error : %s\n",Mix_GetError());
 			SDL_Log("Resumed\n");
 		}
-		while(SDL_PollEvent(&event)!=0)
-		{
-			if (event.type==SDL_QUIT)
-			{
-				quit=true;
-			}
-			else if (event.type==SDL_MOUSEBUTTONDOWN)
-			{
-				int x,y;
-				SDL_GetMouseState(&x,&y);
-				checkCircleClick(x,y);
-			}
-		}
+		
+		SDL_RenderPresent(renderer);
+		++countedFrames;
+		
 		
 		SDL_RenderClear(renderer);
 		SDL_SetRenderDrawColor(renderer,0x00,0x00,0x00,0xFF);
@@ -889,9 +1009,30 @@ bool start_game(char path[])
 		if (score==NULL)
 			SDL_Log("Texture Error Text\n");
 		renderInRect(renderer,score,0,0,200,80);
+		renderInRect(renderer,white,300,30,100,5);
+		renderInRect(renderer,white,300 + 100*(SDL_GetTicks()-GAME_START_TIME)/SONG_TIME,30, 5 ,20);
 		
-		SDL_RenderPresent(renderer);
-		 ++countedFrames;
+		renderInRect(renderer,white,SCREEN_WIDTH-100,30,20, 100);
+		renderInRect(renderer,white,SCREEN_WIDTH- 60,30,20, 100);
+		 
+		 while(SDL_PollEvent(&event)!=0)
+		{
+			if (event.type==SDL_QUIT)
+			{
+				quit=true;
+			}
+			else if (event.type==SDL_MOUSEBUTTONDOWN)
+			{
+				int x,y;
+				SDL_GetMouseState(&x,&y);
+				if (checkCircleClick(x,y)==1)
+				{	
+					quit=true;
+					while (circles.beginning!=NULL)
+						circles.remove_element();
+				}
+			}
+		}
 	}
 	
 	/*
@@ -1048,6 +1189,7 @@ bool start_game(char path[])
 int main(int argc, char* args[] )
 {	
 	init_SDLGame(&renderer,&window, &SCREEN_WIDTH, &SCREEN_HEIGHT);
+	srand(SDL_GetTicks());
 	if (renderer==NULL)
 	{
 		SDL_Log("NULL renderer\n");
@@ -1060,6 +1202,8 @@ int main(int argc, char* args[] )
 	char path[200]="\0";
 	strcpy(path,MUSIC_PATH);
 	CURR_SCORE=0;
+	VREF=0;
+	PAUSED_TICKS=0;
 
 	std::stringstream texText;
 	texText.str("");

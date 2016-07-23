@@ -69,7 +69,7 @@ bool init_SDLimage()
 bool init_SDLmixer()
 {
 	bool success;
-	if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 2048 ) < 0 )
+	if( Mix_OpenAudio( 44100, MIX_DEFAULT_FORMAT, 2, 3528 ) < 0 )
 	{
 		SDL_Log( "SDL_mixer could not initialize! SDL_mixer Error: %s\n", Mix_GetError() ); 
 		success = false; 

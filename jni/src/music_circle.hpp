@@ -14,8 +14,8 @@ class MusicCircle
 	MusicCircle();
 	MusicCircle(int r,int c,int x,int y,int t);
 		
-	void circle_render(SDL_Renderer*,SDL_Texture*, int, int ,int );												//TO DO
-	void effect_render(SDL_Renderer*,SDL_Texture*,SDL_Texture*, int, int ,int );
+	void circle_render(SDL_Renderer*,SDL_Texture*,SDL_Texture*,SDL_Texture*,SDL_Texture*, int, int ,int, int );												//TO DO
+	void effect_render(SDL_Renderer*,SDL_Texture*,SDL_Texture*,SDL_Texture*,SDL_Texture*,SDL_Texture*, int, int ,int, int );
 	int check_click(int x,int y);
 		
 };
