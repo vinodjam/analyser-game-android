@@ -27,7 +27,7 @@
 
 
 #define THRESHOLD 0.1
-#define APPROX_TIME_DIVISIONS 4
+#define APPROX_TIME_DIVISIONS 8
 #define TIME_CIRCLE_ON_SCREEN 4000
 #define TIME_EFFECT_ON_SCREEN 1000
 #define OVERLAPS 2
@@ -382,7 +382,7 @@ int decode_ogg(char path[])
 	{
 		temp1++;
 	}				//TO CHOOSE CORRECT POWER OF 2
-	SAMPLES_IN_HANN_WINDOW=pow(2,(temp1-1));
+	SAMPLES_IN_HANN_WINDOW=pow(2,(temp1));
 	SDL_Log("Sample in a window         : %d\n",SAMPLES_IN_HANN_WINDOW);
 	my_index=0;
 	//SAMPLES_IN_HANN_WINDOW=32768;
@@ -471,8 +471,8 @@ int decode_ogg(char path[])
 						power=pow(output[j].r,2)+pow(output[j].i,2);
 						output_buffer_2sec[l][my_index]+=power*power;
 					}
-					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*7+output_buffer_2sec[l][my_index];
-					LOCAL_VREF[l]/=8;
+					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*2-1)+output_buffer_2sec[l][my_index];
+					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*2;
 					//SDL_Log("LocV %f \t L : %d\n",LOCAL_VREF[l],l);
 					//SDL_Log("OutB %f \t L : %d \t MI : %d\n",output_buffer_2sec[l][my_index],l,my_index);
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
@@ -514,7 +514,7 @@ int decode_ogg(char path[])
 					LAST_CIRCLE=tspawn;
 				}		
 				my_index++;
-				my_index%=16;//OVERLAPS*APPROX_TIME_DIVISIONS*2
+				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*2;//OVERLAPS*APPROX_TIME_DIVISIONS*2
 				
 				for (int j=0;j<(SAMPLES_IN_HANN_WINDOW/2+1)/8;j++)
 				{
@@ -639,7 +639,7 @@ int decode_mp3(char path[])
 	{
 		temp1++;
 	}				//TO CHOOSE CORRECT POWER OF 2
-	SAMPLES_IN_HANN_WINDOW=pow(2,(temp1-1));
+	SAMPLES_IN_HANN_WINDOW=pow(2,(temp1));
 	SDL_Log("Sample in a window         : %d\n",SAMPLES_IN_HANN_WINDOW);
 
 	//SAMPLES_IN_HANN_WINDOW=32768;
@@ -736,8 +736,8 @@ int decode_mp3(char path[])
 						power=pow(output[j].r,2)+pow(output[j].i,2);
 						output_buffer_2sec[l][my_index]+=power*power;
 					}
-					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*7+output_buffer_2sec[l][my_index];
-					LOCAL_VREF[l]/=8;
+					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*2-1)+output_buffer_2sec[l][my_index];
+					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*2;
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
 					output_buffer_2sec[l][my_index]=sqrt(output_buffer_2sec[l][my_index]);
 				}
@@ -775,7 +775,7 @@ int decode_mp3(char path[])
 					LAST_CIRCLE=tspawn;
 				}		
 				my_index++;
-				my_index%=8;
+				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*2;
 				
 				for (int j=0;j<(SAMPLES_IN_HANN_WINDOW/2+1)/8;j++)
 				{
@@ -1010,7 +1010,7 @@ bool start_game(char path[])
 			SDL_Log("Texture Error Text\n");
 		renderInRect(renderer,score,0,0,200,80);
 		renderInRect(renderer,white,300,30,100,5);
-		renderInRect(renderer,white,300 + 100*(SDL_GetTicks()-GAME_START_TIME)/SONG_TIME,30, 5 ,20);
+		renderInRect(renderer,white,300 + 100*(SDL_GetTicks()-GAME_START_TIME-PAUSED_TICKS)/SONG_TIME,30, 5 ,20);
 		
 		renderInRect(renderer,white,SCREEN_WIDTH-100,30,20, 100);
 		renderInRect(renderer,white,SCREEN_WIDTH- 60,30,20, 100);
