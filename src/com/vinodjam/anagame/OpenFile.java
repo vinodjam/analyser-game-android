@@ -1,6 +1,9 @@
 package com.vinodjam.anagame;
 import java.io.File;
 import java.io.Serializable;
+import java.io.FileInputStream;
+
+import android.net.Uri;
 
 import android.app.Activity;
 import android.app.Dialog;
@@ -15,6 +18,8 @@ import android.widget.Button;
 import android.widget.ImageButton;
 import android.widget.Toast;
 import android.widget.TextView;
+
+import android.media.MediaPlayer;
 
 import ar.com.daidalos.afiledialog.*;
 import android.util.Log;
@@ -128,6 +133,7 @@ public class OpenFile extends Activity {
 	    	boolean fileCreated = false;
 	    	String filePath = "";
 	    	
+	    	
 	    	Bundle bundle = data.getExtras();
 	        if(bundle != null)
 	        {
@@ -142,7 +148,30 @@ public class OpenFile extends Activity {
 	        		filePath = file.getAbsolutePath();
 	        	}
 	        }
+	        
+	       
+		
 	    	
+	    	File thisFile = new File(filePath);
+		if (thisFile.exists())
+			Log.v("OpenFile", "Exists");
+		else
+			Log.v("OpenFile", "Could not be located.");
+			
+		//MediaPlayer mplayer;
+		//mplayer = new MediaPlayer();
+		//mplayer=MediaPlayer.create(this,Uri.parse(filePath));
+		//Intent intent=getIntent();
+		//FileInputStream fis = new FileInputStream(thisFile);
+		//if (fis==null)
+		//	Log.v("OpenFile","FIS is null");
+		//if (filePath != null) {
+			//String filepath=intent.getStringExtra("file_path");
+			//mplayer.setDataSource(fis.getFD());
+			//mplayer.prepare();
+		//	mplayer.start();
+		//}
+			
 	        String message = fileCreated? "File created" : "File opened";
 	        message += ": " + filePath;
 	        Log.v("OpenFile", "3File Path is : " + filePath);
@@ -152,6 +181,9 @@ public class OpenFile extends Activity {
 		intent.putExtra("file_path",filePath);
 		
 		OpenFile.this.startActivity(intent);
+		//mplayer.stop();
+		//mplayer.release();
+		//finish();
 	    }
 	}
 }

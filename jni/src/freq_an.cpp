@@ -1,5 +1,9 @@
 #include <iostream>
 
+#include "../HelloSDL2Activity.h"
+#include <jni.h>
+#include <android/log.h>
+
 #include <string.h>
 #include <sstream>
 
@@ -71,6 +75,61 @@ SDL_Texture *blue_circle=NULL, *green_circle=NULL, *yellow_circle=NULL, *white=N
 
 SDL_Color textColor = { 255, 255, 255 };
 
+void music_play_jni()
+{
+	jint temp=4098;//????
+	JNIEnv *env = (JNIEnv*)SDL_AndroidGetJNIEnv();//Android_JNI_GetEnv();
+	jobject jni_activity = (jobject)SDL_AndroidGetActivity();
+	jclass jni_class(env->GetObjectClass(jni_activity));
+	//JNIEnv *env = GetEnv();
+	//jmethodID mid = (*env)->GetStaticMethodID(env, "HelloSDL2Activity", "playMusic", "V");
+	jmethodID mid = (env)->GetStaticMethodID(jni_class,"playMusic", "()V");
+	SDL_Log("2) act %08x", (unsigned int)jni_activity);
+	SDL_Log("1) env %08x", (unsigned int)env);
+	SDL_Log("3) cls %08x", (unsigned int)jni_class);
+	SDL_Log("5) met %08x", (unsigned int)mid);
+	(env)->CallStaticVoidMethod(jni_class, mid);
+	
+	env->DeleteLocalRef(jni_activity);
+	env->DeleteLocalRef(jni_class);
+}
+
+void music_pause_jni()
+{
+	jint temp=4098;//????
+	JNIEnv *env = (JNIEnv*)SDL_AndroidGetJNIEnv();//Android_JNI_GetEnv();
+	SDL_Log("1) env %08x", (unsigned int)env);
+	jobject jni_activity = (jobject)SDL_AndroidGetActivity();
+	SDL_Log("2) act %08x", (unsigned int)jni_activity);
+	jclass jni_class(env->GetObjectClass(jni_activity));
+	SDL_Log("3) cls %08x", (unsigned int)jni_class);
+	//JNIEnv *env = GetEnv();
+	//jmethodID mid = (*env)->GetStaticMethodID(env, "HelloSDL2Activity", "playMusic", "V");
+	jmethodID mid = (env)->GetStaticMethodID(jni_class,"pauseMusic", "()V");
+	 SDL_Log("5) met %08x", (unsigned int)mid);
+	(env)->CallStaticVoidMethod(jni_class, mid);
+	
+	env->DeleteLocalRef(jni_activity);
+	env->DeleteLocalRef(jni_class);
+}
+
+void music_cleanup_jni()
+{
+	jint temp=4098;//????
+	JNIEnv *env = (JNIEnv*)SDL_AndroidGetJNIEnv();//Android_JNI_GetEnv();
+	jobject jni_activity = (jobject)SDL_AndroidGetActivity();
+	jclass jni_class(env->GetObjectClass(jni_activity));
+	//JNIEnv *env = GetEnv();
+	//jmethodID mid = (*env)->GetStaticMethodID(env, "HelloSDL2Activity", "playMusic", "V");
+	jmethodID mid = (env)->GetStaticMethodID(jni_class,"cleanUpMusic", "()V");
+	(env)->CallStaticVoidMethod(jni_class, mid);
+	
+	env->DeleteLocalRef(jni_activity);
+	env->DeleteLocalRef(jni_class);
+}
+
+
+
 int pow(int a,int b)
 {
 	int prod=1;
@@ -121,19 +180,19 @@ void loadAllTextures()
 	}
 	if (loadTexture(renderer,red_circle,"Resources/Pictures/RedCircle.png")!=true)
 	{
-		SDL_Log("Could not load Red Circle","%s\n");
+		SDL_Log("Could not load Red Circle\n");
 	}
 	if (loadTexture(renderer,blue_circle,"Resources/Pictures/DarkBlueCircle.png")!=true)
 	{
-		SDL_Log("Could not load Red Circle","%s\n");
+		SDL_Log("Could not load DarkBlue Circle\n");
 	}
 	if (loadTexture(renderer,green_circle,"Resources/Pictures/GreenCircle.png")!=true)
 	{
-		SDL_Log("Could not load Red Circle","%s\n");
+		SDL_Log("Could not load Green Circle\n");
 	}
 	if (loadTexture(renderer,yellow_circle,"Resources/Pictures/YellowCircle.png")!=true)
 	{
-		SDL_Log("Could not load Red Circle","%s\n");
+		SDL_Log("Could not load Yellow Circle\n");
 	}
 	if (loadTexture(renderer,black_circle,"Resources/Pictures/BlackCircle.png")!=true)
 	{
@@ -212,7 +271,8 @@ void renderEffects()
 
 int pauseNow()
 {
-	Mix_PauseMusic();
+	//Mix_PauseMusic();
+	music_pause_jni();
 	std::stringstream texText;
 	texText.str("");
 	texText<<"RESUME";
@@ -254,7 +314,8 @@ int pauseNow()
 				{
 					PAUSED_TICKS+=SDL_GetTicks()-now;
 					resume=true;
-					Mix_ResumeMusic();
+					music_play_jni();
+					//Mix_ResumeMusic();
 					SDL_DestroyTexture(resumet);
 					resumet=NULL;	
 					SDL_DestroyTexture(quitt);
@@ -844,16 +905,16 @@ bool start_game(char path[])
 	float time_increment=(float)SAMPLES_IN_HANN_WINDOW*float(1000)/float(SAMPLE_RATE);
 	int tmp=time_increment;
 	SDL_Log("Time Increment %f %d\n%f %f\n",time_increment,tmp,(float)SAMPLES_IN_HANN_WINDOW,(float)SAMPLE_RATE);
-	Mix_Music* temp_music=NULL;
-	temp_music=Mix_LoadMUS(path);
-	if (temp_music==NULL)
-	{
-		SDL_Log("Could not load Music  %s\n",Mix_GetError());
-		return false;
-	}
-	Mix_PlayMusic(temp_music,1);
-	if (Mix_PlayingMusic()==0)
-		SDL_Log("Not Playing :( \n");
+	//Mix_Music* temp_music=NULL;
+	//temp_music=Mix_LoadMUS(path);
+	//if (temp_music==NULL)
+	//{
+	//	SDL_Log("Could not load Music  %s\n",Mix_GetError());
+	//	return false;
+	//}
+	//Mix_PlayMusic(temp_music,1);
+	//if (Mix_PlayingMusic()==0)
+	//	SDL_Log("Not Playing :( \n");
 	Mix_HaltMusic();
 	SDL_Log("Finished Loading\n");
 	SDL_Event event;
@@ -914,43 +975,22 @@ bool start_game(char path[])
 	{
 		if (music_on==false && SDL_GetTicks()>GAME_START_TIME+TIME_CIRCLE_ON_SCREEN )
 		{
-			int terr=Mix_PlayMusic(temp_music,1);
-			if (terr==-1)
-				SDL_Log("Music Error : %s\n",Mix_GetError());
-			SDL_Log("Terr %d\n",terr);
+			//int terr=Mix_PlayMusic(temp_music,1);
+			//if (terr==-1)
+				//SDL_Log("Music Error : %s\n",Mix_GetError());
+			//SDL_Log("Terr %d\n",terr);
+			music_play_jni();
 			music_on=true;
-			terr=Mix_GetMusicType(NULL);
+			//terr=Mix_GetMusicType(NULL);
+			/*
 			SDL_Log("%d\n",Mix_GetMusicType(NULL));
 			SDL_Log("Music Started\n");
 			SDL_Log("Could not ?? Music  %s\n",Mix_GetError());
 			SDL_Log("volume was    : %d\n", Mix_VolumeMusic(MIX_MAX_VOLUME));
 			SDL_Log("volume is now : %d\n", Mix_VolumeMusic(-1));
+			*/
 			
-			switch(Mix_GetMusicType(temp_music))
-			{
-			case	MUS_NONE:
-				MUS_CMD:
-					SDL_Log("Command based music is playing.\n");
-					break;
-				MUS_WAV:
-					SDL_Log("WAVE/RIFF music is playing.\n");
-					break;
-				MUS_MOD:
-					SDL_Log("MOD music is playing.\n");
-					break;
-				MUS_MID:
-					SDL_Log("MIDI music is playing.\n");
-					break;
-				MUS_OGG:
-					SDL_Log("OGG music is playing.\n");
-					break;
-				MUS_MP3:
-					SDL_Log("MP3 music is playing.\n");
-					break;
-				default:
-					SDL_Log("Unknown music is playing.\n");
-					break;
-			}
+			
 		}
 		
 	
@@ -980,13 +1020,14 @@ bool start_game(char path[])
 			SDL_Log("Restarted\n");
 		}
 		*/
+		/*
 		if (music_on==true && (Mix_PausedMusic()==1))
 		{
 			Mix_ResumeMusic();
 			SDL_Log("Music Error : %s\n",Mix_GetError());
 			SDL_Log("Resumed\n");
 		}
-		
+		*/
 		SDL_RenderPresent(renderer);
 		++countedFrames;
 		
@@ -1171,9 +1212,10 @@ bool start_game(char path[])
 	for (int i=0;i<8;i++)
 		free(output_buffer_2sec[i]);
 	*/	
-	Mix_HaltChannel(-1);
-	Mix_FreeMusic( temp_music );
-	temp_music = NULL;
+	//Mix_HaltChannel(-1);
+	//Mix_FreeMusic( temp_music );
+	//temp_music = NULL;
+	music_cleanup_jni();
 	SDL_Log("\nFinished Game\n");
 	free(HANN_COEFF);
 	HANN_COEFF=NULL;
