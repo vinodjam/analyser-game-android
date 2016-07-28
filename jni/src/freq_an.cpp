@@ -32,9 +32,12 @@
 
 #define THRESHOLD 0.1
 #define APPROX_TIME_DIVISIONS 8
-#define TIME_CIRCLE_ON_SCREEN 4000
+#define TIME_CIRCLE_ON_SCREEN 3000
 #define TIME_EFFECT_ON_SCREEN 1000
 #define OVERLAPS 2
+
+#define MIN_DELAY 400
+#define NO_SECONDS_COMPARE 2
 
 int SAMPLES_IN_HANN_WINDOW=-1;
 int NO_OF_CHANNELS=-1;
@@ -458,8 +461,8 @@ int decode_ogg(char path[])
 	double *output_buffer_2sec[8];
 	for (int i=0;i<8;i++)
 	{
-		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(double));
-		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*2;j++)
+		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE*sizeof(double));
+		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;j++)
 			output_buffer_2sec[i][j]=0;
 		LOCAL_VREF[i]=0;
 	}
@@ -532,8 +535,8 @@ int decode_ogg(char path[])
 						power=pow(output[j].r,2)+pow(output[j].i,2);
 						output_buffer_2sec[l][my_index]+=power*power;
 					}
-					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*2-1)+output_buffer_2sec[l][my_index];
-					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*2;
+					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE-1)+output_buffer_2sec[l][my_index];
+					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;
 					//SDL_Log("LocV %f \t L : %d\n",LOCAL_VREF[l],l);
 					//SDL_Log("OutB %f \t L : %d \t MI : %d\n",output_buffer_2sec[l][my_index],l,my_index);
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
@@ -558,13 +561,13 @@ int decode_ogg(char path[])
 
 					}
 				}
-				int tspawn=time_increment*notimes/2;
-				if (l_max!=-1 && tspawn-LAST_CIRCLE>500)
+				int tspawn=time_increment*notimes/OVERLAPS;
+				if (l_max!=-1 && tspawn-LAST_CIRCLE>MIN_DELAY)
 				{
 					int colour=1 +rand()%4;
 					//colour+=rand(
-					int rad=SCREEN_WIDTH/5;
-					int y_pos=-0.1*SCREEN_HEIGHT;
+					int rad=SCREEN_HEIGHT*0.1;
+					int y_pos=-0.15*SCREEN_HEIGHT;
 					int x_pos=SCREEN_WIDTH/16+l_max*SCREEN_WIDTH/8;
 					if (x_pos+rad>SCREEN_WIDTH)
 					{
@@ -575,7 +578,7 @@ int decode_ogg(char path[])
 					LAST_CIRCLE=tspawn;
 				}		
 				my_index++;
-				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*2;//OVERLAPS*APPROX_TIME_DIVISIONS*2
+				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;//OVERLAPS*APPROX_TIME_DIVISIONS*2
 				
 				for (int j=0;j<(SAMPLES_IN_HANN_WINDOW/2+1)/8;j++)
 				{
@@ -611,7 +614,7 @@ int decode_ogg(char path[])
 	}
 	//cout<<NO_OF_CHANNELS*SAMPLES_IN_HANN_WINDOW*sizeof(char)*2<<endl;
 	SDL_Log("Actual Sample         : %lld\n",ov_pcm_total(&vf,-1));
-	SONG_TIME=time_increment*notimes/2;
+	SONG_TIME=time_increment*notimes/OVERLAPS;
 	ov_clear(&vf);    
 	//SDL_Log("Samples read in a window         : %d\n",notimes*SAMPLES_IN_HANN_WINDOW/2);
 	//SDL_Log("Temptot         : %d\n",temptot/4);
@@ -715,8 +718,8 @@ int decode_mp3(char path[])
 	double *output_buffer_2sec[8];
 	for (int i=0;i<8;i++)
 	{
-		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*2*sizeof(double));
-		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*2;j++)
+		output_buffer_2sec[i]=(double*)malloc(OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE*sizeof(double));
+		for (int j=0;j<OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;j++)
 			output_buffer_2sec[i][j]=0;
 		LOCAL_VREF[i]=0;
 	}
@@ -797,8 +800,8 @@ int decode_mp3(char path[])
 						power=pow(output[j].r,2)+pow(output[j].i,2);
 						output_buffer_2sec[l][my_index]+=power*power;
 					}
-					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*2-1)+output_buffer_2sec[l][my_index];
-					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*2;
+					LOCAL_VREF[l]=LOCAL_VREF[l]*LOCAL_VREF[l]*(OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE-1)+output_buffer_2sec[l][my_index];
+					LOCAL_VREF[l]/=OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;
 					LOCAL_VREF[l]=sqrt(LOCAL_VREF[l]);
 					output_buffer_2sec[l][my_index]=sqrt(output_buffer_2sec[l][my_index]);
 				}
@@ -820,12 +823,12 @@ int decode_mp3(char path[])
 
 					}
 				}
-				int tspawn=time_increment*notimes/2;
-				if (l_max!=-1 && tspawn-LAST_CIRCLE>500)
+				int tspawn=time_increment*notimes/OVERLAPS;
+				if (l_max!=-1 && tspawn-LAST_CIRCLE>MIN_DELAY)
 				{
 					int colour=1 +rand()%4;
-					int rad=SCREEN_WIDTH/5;
-					int y_pos=-0.1*SCREEN_HEIGHT;
+					int rad=SCREEN_HEIGHT*0.1;
+					int y_pos=-0.15*SCREEN_HEIGHT;
 					int x_pos=SCREEN_WIDTH/16+l_max*SCREEN_WIDTH/8;
 					if (x_pos+rad>SCREEN_WIDTH)
 					{
@@ -836,7 +839,7 @@ int decode_mp3(char path[])
 					LAST_CIRCLE=tspawn;
 				}		
 				my_index++;
-				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*2;
+				my_index%=OVERLAPS*APPROX_TIME_DIVISIONS*NO_SECONDS_COMPARE;
 				
 				for (int j=0;j<(SAMPLES_IN_HANN_WINDOW/2+1)/8;j++)
 				{
@@ -875,11 +878,11 @@ int decode_mp3(char path[])
 		SDL_Log( "Warning: Decoding ended prematurely because: %s\n",
 	         err == MPG123_ERR ? mpg123_strerror(mh) : mpg123_plain_strerror(err) );
 
-	SDL_Log("Samples read in a window         : %d\n",notimes*SAMPLES_IN_HANN_WINDOW/2);
+	SDL_Log("Samples read in a window         : %d\n",notimes*SAMPLES_IN_HANN_WINDOW/OVERLAPS);
 	mpg123_close(mh);
 	mpg123_delete(mh);
 	mpg123_exit();
-	SONG_TIME=time_increment*notimes/2;
+	SONG_TIME=time_increment*notimes/OVERLAPS;
 	free(samples_buffer);
 	free(sample_for_fft);
 	free(output);	
@@ -1038,7 +1041,7 @@ bool start_game(char path[])
 		
 		
 		renderEffects();
-		renderInRect(renderer,gray,0,0.9*SCREEN_HEIGHT,SCREEN_WIDTH,0.02*SCREEN_HEIGHT);
+		renderInRect(renderer,gray,0,0.85*SCREEN_HEIGHT,SCREEN_WIDTH,0.02*SCREEN_HEIGHT);
 		renderCircles();
 		
 		std::stringstream texText;
